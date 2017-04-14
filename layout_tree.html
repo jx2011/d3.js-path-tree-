@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>jx2011</title>
+</head>
+<body>
+<div class="content"></div>
+<script src="js/jquery.js"></script>
+<script src="js/d3.v3.js"></script>
+<script>
+    function layoutFn(container){
+        this.svg = null;
+        this.svgOpt = {width:1000,height:500};
+        this.init = function(){
+            var svgOpt = this.svgOpt;
+            this.svg = d3.select(container).append("svg")
+                    .attr("width",svgOpt.width)
+                    .attr("height",svgOpt.height);
+            this.defs();
+        };
+        this.init();
+    }
+    $.extend(layoutFn.prototype,{
+        defs:function(){
+            this.defs = this.svg.append("defs");
+            var marker = this.defs.append("marker")
+                    .attr("id","arrow")
+                    .attr("markerUnits","strokeWidth")
+                    .attr("markerWidth",6)
+                    .attr("markerHeight",6)
+                    .attr("viewBox","0 0 6 6")
+                    .attr("refX","3")
+                    .attr("refY","3")
+                    .attr("orient","auto");
+            marker.append("path")
+                    .attr("d","M0,0 L6,3 L0,6 L2,3 L0,0")
+                    .attr("fill","teal");
+
+            /*var diagonal = d3.svg.diagonal()
+                    .projection(function(d,i){
+                        return [d.x, d.y];
+                    });
+            this.svg.append("path")
+                    .attr("d",diagonal({source:{x:20,y:100},target:{x:400,y:200}}))
+                    .attr("fill","none")
+                    .attr("stroke-width",2)
+                    .attr("stroke","teal")
+                    .attr("marker-start","url(#arrow)")
+                    .attr("marker-mid","url(#arrow)")
+                    .attr("marker-end","url(#arrow)")*/
+
+        },
+        draw:function(){
+
+            var svgOpt = this.svgOpt;
+            var tree = d3.layout.tree()
+                    .size([svgOpt.width,svgOpt.height-100])
+                    .separation(function(a,b){
+                        return a.parent== b.parent?1:2;
+                    });
+            var diagonal = d3.svg.diagonal()
+                    .projection(function(d,i){
+                        if(i==0){
+                            return [d.x, d.y]
+                        }
+                        if(i==3){
+                            return [d.x, d.y-30];
+                        }
+                        return [d.x, d.y];
+                    });
+            this.getData(tree,diagonal);
+
+        },
+        getData:function(tree,diagonal){
+            d3.json("tree.json",function(error,root){
+                var nodes = tree.nodes(root);
+                nodes[0].y = 40;
+                var links = tree.links(nodes);
+
+                var link = this.svg.append("g")
+                        .classed("linkArea",true)
+                        .selectAll(".link")
+                        .data(links)
+                        .enter()
+                        .append("path")
+                        .classed("link",true)
+                        .attr("d",diagonal)
+                        .attr("fill","none")
+                        .attr("stroke","teal")
+                        .attr("stroke-width",2)
+                        .attr("marker-end","url(#arrow)");
+
+                var circleG = this.svg.append("g");
+
+                var node = this.svg.append("g")
+                        .classed("nodeArea",true)
+                        .selectAll(".node")
+                        .data(nodes)
+                        .enter()
+                        .append("g")
+                        .classed("node",true)
+                        .attr("transform",function(d,i){
+                            return "translate("+ d.x+","+(d.y)+")";
+                        });
+
+                node.append("image")
+                        .attr("width",40)
+                        .attr("height",50)
+                        .attr("xlink:href","img/180.jpg")
+                        .attr("fill","#fff")
+                        .attr("x",-20)
+                        .attr("y",-25);
+
+                function addCircle(i,delay){
+                    var points = links[i],
+                            path = link[0][i];
+                    var circle = circleG.append("circle")
+                            .classed("c",true)
+                            .attr("r",6)
+                            .attr("fill","orangered")
+                            .attr("transform","translate("+points.source.x+","+points.source.y+")");
+                    circle.transition()
+                            .ease("in")
+                            .delay(delay||0)
+                            .duration(Math.random()*500+1000)
+                            .attrTween("transform",function(d,i,a){
+                                var l = path.getTotalLength();
+                                return function(t){
+                                    var p = path.getPointAtLength(t * l)
+                                    return "translate("+ p.x+","+ p.y+")"
+                                }
+                            })
+                            .each("end",function(){
+                                d3.select(this).remove();
+                                addCircle(i,Math.random()*500);
+                            });
+
+                }
+                link.each(function(d,i){
+                    addCircle(i,Math.random()*500)
+                });
+            }.bind(this));
+        }
+    });
+    $(function(){
+        var layouter = new layoutFn(".content");
+        layouter.draw();
+    });
+</script>
+</body>
+</html>
